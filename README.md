@@ -29,13 +29,32 @@ This repository is a simple **Viewer** for the public **HAPI FHIR server**.
 
 This will start the application locally at http://localhost:3000 or simillar.
 
+
 ![image](https://github.com/user-attachments/assets/c8c67d46-89a3-4b60-90fd-e11e29e18f70)
+
+
+
+
+
 
 ![image](https://github.com/user-attachments/assets/f46d501a-d492-4e96-b7e5-ce4b038e3833)
 
+
+
+
+
+
 ![image](https://github.com/user-attachments/assets/eb3ef4e5-a8aa-48d4-a4ef-afe144ea370b)
 
+
+
+
+
 ![image](https://github.com/user-attachments/assets/8b7d76cb-17c2-4096-9c7d-f48f3ec85dd8)
+
+
+
+
 
 ![image](https://github.com/user-attachments/assets/30b0d478-70ed-43f0-99ad-0173bf745289)
 
