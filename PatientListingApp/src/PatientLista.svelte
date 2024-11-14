@@ -31,6 +31,7 @@
           }
 
           const response = await axios.get(`${hapiFhir}/Patient`, { params });
+          //console.log(response.data);
           patients = response.data.entry?.map((entry: any) => entry.resource) || [];
       } catch (error) {
           console.error("Error fetching patients:", error);

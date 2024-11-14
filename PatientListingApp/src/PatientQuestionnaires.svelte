@@ -3,15 +3,27 @@
     import axios from "axios";
     import { navigate } from "svelte-routing";
 
-    export let id: string;
+    export let id: string; // Patient ID
     const hapiFhir = "https://hapi.fhir.org/baseR4";
     let questionnaires: any[] = [];
+    let patient: any = null; // To store patient details
     let loading = true;
     let error = false;
 
     onMount(async () => {
-        await fetchQuestionnaires();
+        await fetchPatientDetails(); // Fetch patient details
+        await fetchQuestionnaires(); // Fetch questionnaires
     });
+
+    async function fetchPatientDetails() {
+        try {
+            const response = await axios.get(`${hapiFhir}/Patient/${id}`);
+            patient = response.data; // Store patient details
+        } catch (err) {
+            console.error("Error fetching patient details:", err);
+            error = true;
+        }
+    }
 
     async function fetchQuestionnaires() {
         loading = true;
@@ -68,6 +80,9 @@
         {:else if error}
             <p class="error">Error loading questionnaires. Please try again.</p>
         {:else}
+            {#if patient}
+                <h2>{patient.name?.[0]?.given.join(' ')} {patient.name?.[0]?.family} (ID: {patient.id})</h2>
+            {/if}
             {#if questionnaires.length === 0}
                 <p>No questionnaires found for this patient.</p>
             {:else}

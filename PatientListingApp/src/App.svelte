@@ -43,6 +43,7 @@
 </Router>
 
 <style>
+    
   header {
       display: flex;
       flex-direction: column;
@@ -51,7 +52,7 @@
   .logo-container {
       text-align: center;
       margin-bottom: 20px;
-      background-color: #f9feff;
+      background-color: #ffffff;
       width: 100%;
   }
   .logo-button {
@@ -66,13 +67,13 @@
   }
   nav {
       margin-bottom: 10px;
-      background-color: hsla(202, 68%, 18%, 0.438);
+      background-color: hsla(204, 6%, 33%, 0.438);
       width: 100%;
   }
   nav :global(a) {
       margin-right: 25px;
       text-decoration: none;
-      color: #cfd8db;
+      color: #ffffff;
       font-size: 20px;
   }
   nav :global(a:hover) {

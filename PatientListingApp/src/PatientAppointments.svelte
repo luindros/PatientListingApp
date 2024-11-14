@@ -210,7 +210,7 @@
     }
     .patientName {
       text-align: center;
-      color: rgb(104, 237, 255);
+      color: rgb(0, 0, 0);
     }
     main {
       font-family: Arial, sans-serif;
