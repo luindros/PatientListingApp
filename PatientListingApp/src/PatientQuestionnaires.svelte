@@ -32,11 +32,34 @@
             const response = await axios.get(`${hapiFhir}/QuestionnaireResponse`, {
                 params: {
                     subject: `Patient/${id}`,
+                    _include: "QuestionnaireResponse:encounter", // Include encounter information
                     _sort: '-authored',
                     _count: 100
                 }
             });
-            questionnaires = response.data.entry?.map((entry: any) => entry.resource) || [];
+
+            // Create a map of encounter identifiers for easy access
+            const encounterMap = response.data.entry
+                ?.filter(entry => entry.resource.resourceType === 'Encounter')
+                .reduce((map, entry) => {
+                    const encounterId = entry.resource.identifier?.[0]?.value; // Get the identifier value
+                    if (encounterId) {
+                        map[entry.resource.id] = encounterId; // Map encounter ID to its reference ID
+                    }
+                    return map;
+                }, {});
+
+            // Filter the response to extract only QuestionnaireResponse resources
+            questionnaires = response.data.entry
+                ?.filter(entry => entry.resource.resourceType === 'QuestionnaireResponse') // Only keep QuestionnaireResponses
+                .map(entry => {
+                    const questionnaire = entry.resource;
+                    const encounterReference = questionnaire.encounter?.reference.split('/')[1]; // Get the encounter reference ID
+                    return {
+                        ...questionnaire,
+                        encounterId: encounterMap[encounterReference] || 'N/A' // Add the encounter ID from the map
+                    };
+                }) || [];
         } catch (err) {
             console.error("Error fetching questionnaires:", err);
             error = true;
@@ -90,9 +113,8 @@
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Questionnaire ID</th>
-                            <th>Questionnaire</th>
-                            <th>Responses</th>
+                            <th>Questionnaire ID (Resp)</th>
+                            <th>Questions and Responses</th>
                             <th>Encounter ID</th>
                             <th>Actions</th>
                         </tr>
@@ -103,20 +125,16 @@
                                 <td>{new Date(questionnaire.authored).toLocaleString()}</td>
                                 <td>{questionnaire.id || 'N/A'}</td>
                                 <td>
-                                    {#each questionnaire.item as item}
-                                        <div>{item.text || 'Unknown'}</div>
-                                    {/each}
+                                    <div class="qa-section">
+                                        {#each questionnaire.item as item}
+                                            <div class="question-response-pair">
+                                                <div class="question">{item.text || 'Unknown'}</div>
+                                                <div class="response">{#each item.answer as answer}{getAnswerValue(answer)}{/each}</div>
+                                            </div>
+                                        {/each}
+                                    </div>
                                 </td>
-                                <td>
-                                    {#each questionnaire.item as item}
-                                        <div>
-                                            {#each item.answer as answer}
-                                                <div>{getAnswerValue(answer)}</div> <!-- Display all answer values -->
-                                            {/each}
-                                        </div>
-                                    {/each}
-                                </td>
-                                <td>{questionnaire.identifier?.value || 'N/A'}</td>
+                                <td>{questionnaire.encounterId || 'N/A'}</td> <!-- Display Encounter ID -->
                                 <td>
                                     <button class="delete-button" on:click={() => deleteQuestionnaire(questionnaire.id)}>
                                         Delete
@@ -163,7 +181,7 @@
     }
 
     th {
-        background-color: #005f69;
+        background-color: #00adc0;
         color: white;
         font-weight: bold;
         text-transform: uppercase;
@@ -214,5 +232,28 @@
 
     .delete-button:hover {
         background-color: #d32f2f;
+    }
+
+    /* New styles for question-response pairs */
+    .qa-section {
+        margin-top: 10px;
+    }
+
+    .question-response-pair {
+        margin-bottom: 8px;
+        padding: 8px;
+        border: 1px solid #7aa9b0; /* Light blue border */
+        border-radius: 5px;
+        background-color: #e0f7fa; /* Light blue background for questions */
+    }
+
+    .question {
+        font-weight: bold;
+        color: #00796b; /* Darker color for questions */
+    }
+
+    .response {
+        margin-left: 10px; /* Indent responses for clarity */
+        color: #d32f2f; /* Darker color for responses */
     }
 </style>

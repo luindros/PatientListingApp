@@ -6,37 +6,48 @@
     export let id: string; // Patient ID
     const hapiFhir = "https://hapi.fhir.org/baseR4";
     let observations: any[] = [];
-    let patient: any = null; // To store patient details
     let loading = true;
     let error = false;
 
     onMount(async () => {
-        await fetchPatientDetails(); // Fetch patient details
-        await fetchObservations(); // Fetch observations
+        await fetchObservationsWithEncounters(); // Fetch observations with encounters
     });
 
-    async function fetchPatientDetails() {
-        try {
-            const response = await axios.get(`${hapiFhir}/Patient/${id}`);
-            patient = response.data; // Store patient details
-        } catch (err) {
-            console.error("Error fetching patient details:", err);
-            error = true;
-        }
-    }
-
-    async function fetchObservations() {
+    async function fetchObservationsWithEncounters() {
         loading = true;
         error = false;
         try {
             const response = await axios.get(`${hapiFhir}/Observation`, {
                 params: {
                     patient: id,
+                    _include: "Observation:encounter", // Include encounter information
                     _sort: '-date',
                     _count: 100
                 }
             });
-            observations = response.data.entry?.map((entry: any) => entry.resource) || [];
+            
+            // Create a map of encounter identifiers for easy access
+            const encounterMap = response.data.entry
+                ?.filter(entry => entry.resource.resourceType === 'Encounter')
+                .reduce((map, entry) => {
+                    const encounterId = entry.resource.identifier?.[0]?.value; // Get the identifier value
+                    if (encounterId) {
+                        map[entry.resource.id] = encounterId; // Map encounter ID to its reference ID
+                    }
+                    return map;
+                }, {});
+
+            // Filter the response to extract only Observation resources
+            observations = response.data.entry
+                ?.filter(entry => entry.resource.resourceType === 'Observation') // Only keep Observations
+                .map(entry => {
+                    const observation = entry.resource;
+                    const encounterReference = observation.encounter?.reference.split('/')[1]; // Get the encounter reference ID
+                    return {
+                        ...observation,
+                        encounterId: encounterMap[encounterReference] || 'N/A' // Add the encounter ID from the map
+                    };
+                }) || [];
         } catch (err) {
             console.error("Error fetching observations:", err);
             error = true;
@@ -72,7 +83,7 @@
     function renderComponents(components: any[]): string {
         return components.map(component => {
             const componentValue = getObservationValue(component);
-            const componentText = component.code?.coding[0]?.display || 'Unknown';
+            const componentText = component.code?.coding?.[0]?.display || 'Unknown'; // Safe access
             return `${componentText}: ${componentValue}`;
         }).join(', ');
     }
@@ -80,7 +91,7 @@
     async function deleteObservation(observationId: string) {
         try {
             await axios.delete(`${hapiFhir}/Observation/${observationId}`);
-            await fetchObservations(); // Refresh the list after deletion
+            await fetchObservationsWithEncounters(); // Refresh the list after deletion
         } catch (err) {
             console.error("Error deleting observation:", err);
             alert("Failed to delete observation. Please try again.");
@@ -96,9 +107,6 @@
         {:else if error}
             <p class="error">Error loading observations. Please try again.</p>
         {:else}
-            {#if patient}
-                <h2>{patient.name?.[0]?.given.join(' ')} {patient.name?.[0]?.family} (ID: {patient.id})</h2>
-            {/if}
             {#if observations.length === 0}
                 <p>No observations found for this patient.</p>
             {:else}
@@ -116,7 +124,7 @@
                         {#each observations as observation}
                             <tr>
                                 <td>{formatDate(observation.effectiveDateTime)}</td>
-                                <td>{observation.code.coding[0]?.display || 'N/A'}</td>
+                                <td>{observation.code?.coding?.[0]?.display || 'N/A'}</td> <!-- Safe access -->
                                 <td>
                                     {#if observation.component && observation.component.length > 0}
                                         {renderComponents(observation.component)} <!-- Display component values -->
@@ -124,7 +132,7 @@
                                         {getObservationValue(observation)} <!-- Display main observation value -->
                                     {/if}
                                 </td>
-                                <td>{observation.encounter?.reference.split('/')[1] || 'N/A'}</td> <!-- Display Encounter ID -->
+                                <td>{observation.encounterId || 'N/A'}</td> <!-- Display Encounter ID -->
                                 <td>
                                     <button class="delete-button" on:click={() => deleteObservation(observation.id)}>
                                         Delete
@@ -171,7 +179,7 @@
     }
 
     th {
-        background-color: #005f69;
+        background-color: #00adc0;
         color: white;
         font-weight: bold;
         text-transform: uppercase;

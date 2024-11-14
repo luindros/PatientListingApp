@@ -288,7 +288,7 @@
     }
   
     th {
-      background-color: #005f69;
+      background-color: #00adc0;
       color: white;
       font-weight: bold;
       text-transform: uppercase;
