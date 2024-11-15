@@ -6,12 +6,24 @@
     export let id: string; // Patient ID
     const hapiFhir = "https://hapi.fhir.org/baseR4";
     let observations: any[] = [];
+    let patient: any = null; // To store patient details
     let loading = true;
     let error = false;
 
     onMount(async () => {
+        await fetchPatientDetails(); // Fetch patient details
         await fetchObservationsWithEncounters(); // Fetch observations with encounters
     });
+
+    async function fetchPatientDetails() {
+        try {
+            const response = await axios.get(`${hapiFhir}/Patient/${id}`);
+            patient = response.data; // Store patient details
+        } catch (err) {
+            console.error("Error fetching patient details:", err);
+            error = true;
+        }
+    }
 
     async function fetchObservationsWithEncounters() {
         loading = true;
@@ -107,6 +119,9 @@
         {:else if error}
             <p class="error">Error loading observations. Please try again.</p>
         {:else}
+            {#if patient}
+                <h2 class="patientName">{patient.name[0].given.join(' ')} {patient.name[0].family} ({patient.id})</h2>
+            {/if}
             {#if observations.length === 0}
                 <p>No observations found for this patient.</p>
             {:else}
@@ -160,6 +175,11 @@
     .title {
         text-align: center;
         color: rgb(35, 166, 184);
+    }
+
+    .patientName {
+        text-align: center;
+        color: rgb(0, 0, 0);
     }
 
     table {

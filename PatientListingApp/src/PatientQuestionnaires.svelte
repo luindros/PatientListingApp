@@ -5,13 +5,48 @@
 
     export let id: string; // Patient ID
     const hapiFhir = "https://hapi.fhir.org/baseR4";
-    let questionnaires: any[] = [];
+    let questionnaires: any[] = []; // Array to hold questionnaire responses
     let patient: any = null; // To store patient details
     let loading = true;
     let error = false;
 
+    // Define types for FHIR resources
+    interface Encounter {
+        resourceType: string;
+        id: string;
+        identifier: Array<{ value: string }>; // Identifier array
+        reference: string; // Reference to the encounter
+    }
+
+    interface QuestionnaireResponse {
+        resourceType: string;
+        id: string;
+        authored: string;
+        item: Array<{
+            linkId: string;
+            text: string;
+            answer?: Array<{
+                valueString?: string;
+                valueBoolean?: boolean;
+                valueInteger?: number;
+                valueDecimal?: number;
+                valueDate?: string;
+            }>;
+        }>;
+        encounter?: {
+            reference: string;
+        };
+    }
+
+    interface Bundle {
+        resourceType: string;
+        entry: Array<{
+            resource: QuestionnaireResponse | Encounter; // Can be either QuestionnaireResponse or Encounter
+        }>;
+    }
+
     onMount(async () => {
-        await fetchPatientDetails(); // Fetch patient details
+        await fetchPatientDetails(); // Fetch patient details on component mount
         await fetchQuestionnaires(); // Fetch questionnaires
     });
 
@@ -29,7 +64,7 @@
         loading = true;
         error = false;
         try {
-            const response = await axios.get(`${hapiFhir}/QuestionnaireResponse`, {
+            const response = await axios.get<Bundle>(`${hapiFhir}/QuestionnaireResponse`, {
                 params: {
                     subject: `Patient/${id}`,
                     _include: "QuestionnaireResponse:encounter", // Include encounter information
@@ -38,28 +73,21 @@
                 }
             });
 
-            // Create a map of encounter identifiers for easy access
-            const encounterMap = response.data.entry
-                ?.filter(entry => entry.resource.resourceType === 'Encounter')
-                .reduce((map, entry) => {
-                    const encounterId = entry.resource.identifier?.[0]?.value; // Get the identifier value
-                    if (encounterId) {
-                        map[entry.resource.id] = encounterId; // Map encounter ID to its reference ID
-                    }
-                    return map;
-                }, {});
-
-            // Filter the response to extract only QuestionnaireResponse resources
+            // Extract questionnaire responses from the response
             questionnaires = response.data.entry
-                ?.filter(entry => entry.resource.resourceType === 'QuestionnaireResponse') // Only keep QuestionnaireResponses
+                .filter(entry => entry.resource.resourceType === 'QuestionnaireResponse')
                 .map(entry => {
                     const questionnaire = entry.resource;
-                    const encounterReference = questionnaire.encounter?.reference.split('/')[1]; // Get the encounter reference ID
+
+                    // Find the encounter resource associated with this questionnaire
+                    const encounterEntry = response.data.entry.find(e => e.resource.resourceType === 'Encounter' && e.resource.id === questionnaire.encounter?.reference.split('/')[1]);
+                    const encounterIdentifier = encounterEntry?.resource.identifier?.[0]?.value || 'N/A'; // Get the encounter identifier
+
                     return {
                         ...questionnaire,
-                        encounterId: encounterMap[encounterReference] || 'N/A' // Add the encounter ID from the map
+                        encounterIdentifier // Add the encounter identifier to the questionnaire object
                     };
-                }) || [];
+                });
         } catch (err) {
             console.error("Error fetching questionnaires:", err);
             error = true;
@@ -104,8 +132,9 @@
             <p class="error">Error loading questionnaires. Please try again.</p>
         {:else}
             {#if patient}
-                <h2>{patient.name?.[0]?.given.join(' ')} {patient.name?.[0]?.family} (ID: {patient.id})</h2>
+                <h2 class="patientName">{patient.name[0].given.join(' ')} {patient.name[0].family} ({patient.id})</h2>
             {/if}
+            
             {#if questionnaires.length === 0}
                 <p>No questionnaires found for this patient.</p>
             {:else}
@@ -113,9 +142,10 @@
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Questionnaire ID (Resp)</th>
+                            <th>Questionnaire ID</th>
                             <th>Questions and Responses</th>
                             <th>Encounter ID</th>
+                            <th>Encounter Identifier</th> <!-- New column for Encounter Identifier -->
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -129,12 +159,21 @@
                                         {#each questionnaire.item as item}
                                             <div class="question-response-pair">
                                                 <div class="question">{item.text || 'Unknown'}</div>
-                                                <div class="response">{#each item.answer as answer}{getAnswerValue(answer)}{/each}</div>
+                                                <div class="response">
+                                                    {#if item.answer}
+                                                        {#each item.answer as answer}
+                                                            {getAnswerValue(answer)} 
+                                                        {/each}
+                                                    {:else}
+                                                        No response
+                                                    {/if}
+                                                </div>
                                             </div>
                                         {/each}
                                     </div>
                                 </td>
-                                <td>{questionnaire.encounterId || 'N/A'}</td> <!-- Display Encounter ID -->
+                                <td>{questionnaire.encounter?.reference || 'N/A'}</td> <!-- Display Encounter ID -->
+                                <td>{questionnaire.encounterIdentifier || 'N/A'}</td> <!-- Display Encounter Identifier -->
                                 <td>
                                     <button class="delete-button" on:click={() => deleteQuestionnaire(questionnaire.id)}>
                                         Delete
@@ -162,6 +201,11 @@
     .title {
         text-align: center;
         color: rgb(35, 166, 184);
+    }
+
+    .patientName {
+        text-align: center;
+        color: rgb(0, 0, 0);
     }
 
     table {
