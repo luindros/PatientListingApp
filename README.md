@@ -44,7 +44,8 @@ This will start the application locally at http://localhost:3000 or simillar.
 
 
 
-![image](https://github.com/user-attachments/assets/eb3ef4e5-a8aa-48d4-a4ef-afe144ea370b)
+<img width="539" alt="image" src="https://github.com/user-attachments/assets/deca644c-d99c-4202-8efa-3bb2db839a16" />
+
 
 
 
