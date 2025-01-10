@@ -50,11 +50,13 @@ This will start the application locally at http://localhost:3000 or simillar.
 
 
 
-![image](https://github.com/user-attachments/assets/8b7d76cb-17c2-4096-9c7d-f48f3ec85dd8)
+
+<img width="575" alt="image" src="https://github.com/user-attachments/assets/a977bdbf-c466-4791-aede-577cd619ff78" />
 
 
 
 
 
-![image](https://github.com/user-attachments/assets/30b0d478-70ed-43f0-99ad-0173bf745289)
+
+<img width="659" alt="image" src="https://github.com/user-attachments/assets/f31eefd7-baf8-4179-8f78-3988d6bdccf1" />
 
